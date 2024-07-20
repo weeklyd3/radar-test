@@ -17,9 +17,9 @@ for i in range(-10, 11):
       tiley = j * 500
       pixels = []
       resolution = 100
-      for x in range(0, 500, round(500 / resolution)):
+      for y in range(0, 500, round(500 / resolution)):
          row = []
-         for y in range(0, 500, round(500 / resolution)):
+         for x in range(0, 500, round(500 / resolution)):
             pixel_coordinate = [tilex + x, tiley + y]
             closest_distance = 500
             for w in all_waypoints:

@@ -1,4 +1,14 @@
 function drawMap(draw, width, height) {
+	if (globalDraw.keyIsDown(173) || globalDraw.keyIsDown(61)) {
+		var currentRatio = player.map_range / (height * 0.85);
+		if (globalDraw.keyIsDown(173)) currentRatio += 0.1;
+		else currentRatio -= 0.1;
+		console.log(currentRatio);
+		if (currentRatio < 0.5) currentRatio = 0.5;
+		if (currentRatio > 10) currentRatio = 10;
+		player.map_range = height * 0.85 * currentRatio;
+		console.log(player.map_range / height * 0.85);
+	}
 	display2_header.clear();
 	display2_header.fill('black');
 	display2_header.rect(0, 0, width, height);
@@ -10,8 +20,6 @@ function drawMap(draw, width, height) {
 	draw.background('black');
 	var map_center = [width / 2, height * 0.95];
 	var map_heading = player.heading;
-	draw.fill('white');
-	draw.circle(...map_center, 5);
 	var map_radius = height * 0.85;
 	draw.translate(...map_center);
 	draw.rotate(-map_heading);
@@ -19,6 +27,10 @@ function drawMap(draw, width, height) {
 	draw.stroke('white');
 	draw.rotate(player.heading);
 	drawWaypoints(draw, width, height);
+	draw.fill(draw.color(0, 0, 0, 0));
+	draw.strokeWeight(1);
+	draw.triangle(-10, 14, 10, 14, 0, -14);
+	draw.strokeWeight(0);
 	draw.image(display2_header, -width / 2, -height * 0.95, width, height);
 	draw.rotate(-player.heading);
 	draw.stroke('white');
@@ -38,6 +50,12 @@ function drawMap(draw, width, height) {
 	draw.fill(draw.color(0, 0, 0, 0));
 	draw.stroke('white');
 	draw.circle(0, 0, map_radius * 2);
+	draw.push();
+	draw.fill('white');
+	draw.strokeWeight(0);
+	draw.textAlign('right', 'center');
+	draw.text('map zoom ×' + Math.round(10 * player.map_range / map_radius) / 10 + "\nrange " + Math.round(player.map_range) + " px", width / 2, -height * 0.85);
+	draw.pop();
 	draw.pop();
 }
 function loadZone(name) {
@@ -95,7 +113,7 @@ function drawWaypoints(draw, width, height) {
 					dx *= ratio;
 					dy *= ratio;
 					draw.circle(dx, dy, 3);
-					draw.text(wpt.name.toUpperCase(), dx, dy - 10);
+					draw.text(wpt.name.toUpperCase(), dx, dy + 10);
 				}
 			}
 		}
@@ -107,7 +125,7 @@ function update() {
 	player.zoneXOffset = player.x - 500 * player.zoneX;
 	player.zoneYOffset = player.y - 500 * player.zoneY;
 	draw.clear();
-	drawMap(display2, width / 2, height);
+	drawMap(display2, width / 2, height * 0.75);
 	draw.image(display1, 0, 0);
 	draw.image(display2, width / 2, 0);
 }
@@ -115,8 +133,8 @@ var player = {
 	x: 0,
 	y: 0,
 	heading: 0,
-	map_range: 918,
-	map_texture: ''
+	map_range: 688.5,
+	map_texture: '',
 }
 var waypoints = {};
 var textures = {};
@@ -129,11 +147,12 @@ var s = function (sketch) {
 		draw.angleMode(draw.DEGREES);
 		updateInterval = setInterval(update, 1000 / 24);
 		display1 = draw.createGraphics(width / 2, height);
-		display2 = draw.createGraphics(width / 2, height);
+		display2 = draw.createGraphics(width / 2, height * 0.75);
+		display2.textFont('consolas');
 		display2.angleMode('degrees');
 		display2.background('black');
 		display2.textAlign('center', 'center');
-		display2_header = draw.createGraphics(width / 2, height);
+		display2_header = draw.createGraphics(width / 2, height * 0.75);
 	}
 };
 var draw = new p5(s, 'pad');
