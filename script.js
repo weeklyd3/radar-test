@@ -3,11 +3,10 @@ function drawMap(draw, width, height) {
 		var currentRatio = player.map_range / (height * 0.85);
 		if (globalDraw.keyIsDown(173)) currentRatio += 0.1;
 		else currentRatio -= 0.1;
-		console.log(currentRatio);
+		currentRatio = Math.round(10 * currentRatio) / 10;
 		if (currentRatio < 0.5) currentRatio = 0.5;
 		if (currentRatio > 10) currentRatio = 10;
 		player.map_range = height * 0.85 * currentRatio;
-		console.log(player.map_range / height * 0.85);
 	}
 	display2_header.clear();
 	display2_header.fill('black');
@@ -58,12 +57,143 @@ function drawMap(draw, width, height) {
 	draw.pop();
 	draw.pop();
 }
+function drawEngine(draw, width, height) {
+	draw.clear();
+	draw.push();
+	draw.strokeWeight(0);
+	draw.background('black');
+	draw.fill('white');
+	var parameters = [
+		{
+			name: 'Throttle',
+			min: 0,
+			max: 100,
+			value: (player.engine.current_n1 - player.engine.idle_n1) / (player.engine.max_n1 - player.engine.idle_n1) * 100,
+			decimals: 1,
+			dial: true,
+			commanded_value: player.engine.cmd_throttle * 100
+		},
+		{
+			name: "Commanded Throttle",
+			min: 0,
+			max: 100,
+			value: player.engine.cmd_throttle * 100,
+			dial: false,
+			decimals: 1,
+			hide: player.display != 2
+		},
+		{
+			name: 'EPR',
+			min: 0.9,
+			max: 1.9,
+			value: player.engine.current_epr,
+			decimals: 3,
+			dial: true,
+			commanded_value: player.engine.cmd_epr
+		},
+		{
+			name: 'Commanded EPR',
+			min: 0.9,
+			max: 1.9,
+			value: player.engine.cmd_epr,
+			decimals: 3,
+			dial: false,
+			hide: player.display != 2
+		},
+		{
+			name: 'N1',
+			min: 0,
+			max: 104,
+			value: player.engine.current_n1 * 100,
+			decimals: 1,
+			dial: player.display == 2,
+			commanded_value: player.engine.cmd_n1
+		},
+		{
+			name: 'Commanded N1',
+			min: 0,
+			max: 104,
+			value: player.engine.cmd_n1 * 100,
+			decimals: 1,
+			dial: false,
+			hide: player.display != 2
+		},
+		{
+			name: 'N2',
+			min: 0,
+			max: 100.2,
+			value: player.engine.current_n2 * 100,
+			decimals: 1,
+			dial: player.display == 2
+		},
+		{
+			name: "Fuel per hour",
+			min: 0,
+			max: Infinity,
+			value: player.engine.current_ff,
+			decimals: 0,
+			dial: false
+		}
+	];
+	draw.translate(width / 2, 10);
+	for (const param of parameters) {
+		if (param.hide) continue;
+		draw.translate(0, param.dial ? 35 : 10);
+		drawParameter(draw, param);
+		draw.translate(0, param.dial ? 35 : 10);
+	}
+	draw.pop();
+}
+function drawParameter(draw, param) {
+	draw.textAlign('right', 'center');
+	draw.text(param.name, -30, 0);
+	draw.rect(-7, -1, 14, 2);
+	var param_value = param.value;
+	if (param_value < param.min) param_value = param.min;
+	if (param_value > param.max) param_value = param.max;
+	var value = param_value.toFixed(param.decimals);
+	if (param.dial) {
+		draw.push();
+		draw.fill(draw.color(0, 0, 0, 0));
+		draw.strokeWeight(1);
+		draw.arc(60, 0, 60, 60, 150, 30);
+		draw.translate(60, 0);
+		draw.fill('lime');
+		draw.strokeWeight(0);
+		draw.circle(0, 0, 5);
+		draw.rotate(240);
+		var rotate_amount = (param_value - param.min) / (param.max - param.min) * 240;
+		draw.rotate(rotate_amount);
+		draw.rect(-1, -30, 2, 30)
+		draw.rotate(-rotate_amount);
+		draw.fill('white');
+		for (var i = 0; i < 11; i++) {
+			draw.rect(-0.5, -35, 1, 5);
+			draw.rotate(24);
+		}
+		draw.rotate(-264);
+		if (param.hasOwnProperty('commanded_value')) {
+			var cmd_value = param.commanded_value;
+			var cmd_rotate_amount = (cmd_value - param.min) / (param.max - param.min) * 240;
+			draw.fill('cyan');
+			draw.rotate(cmd_rotate_amount);
+			draw.triangle(0, -33, -3, -41, 3, -41);
+		}
+		draw.pop();
+		draw.fill('lime');
+		draw.textAlign('center', 'center');
+		draw.text(value, 60, 20);
+		draw.fill('white');
+	} else {
+		draw.textAlign('left', 'center');
+		draw.text(value, 30, 0);
+	}
+}
 function loadZone(name) {
 	waypoints[name] = [];
 	var numbers = name.split(',');
 	var x = Number(numbers[0]);
 	var y = Number(numbers[1]);
-	console.log(x, y);
 	if (x < -10 || x > 10) return;
 	if (y < -10 || y > 10) return;
 	if (localStorage.getItem('points-' + name)) {
@@ -92,14 +222,12 @@ function drawWaypoints(draw, width, height) {
 				var texture_object = textures[player.map_texture];
 				if (!texture_object[`${x},${y}`]) {
 					var url = `textures/${player.map_texture}/${x},${y}.png`;
-					console.log(url);
 					texture_object[`${x},${y}`] = globalDraw.loadImage(url);
 				}
 				target = texture_object[`${x},${y}`];
 				if (target) draw.image(texture_object[`${x},${y}`], ((x - player.zoneX) * 500 - player.zoneXOffset) * ratio, ((y - player.zoneY) * 500 - player.zoneYOffset) * ratio, 500 * ratio, 500 * ratio);
 			}
 			if (!waypoints[x + ',' + y]) {
-				console.log('LOAD', x + ',' + y)
 				loadZone(x + ',' + y);
 			} else {
 				for (const wpt of waypoints[x + ',' + y]) {
@@ -119,22 +247,74 @@ function drawWaypoints(draw, width, height) {
 		}
 	}
 }
+function drawDisplay(draw, width, height) {
+	if (!player.display && (nav_display.height >= (globalDraw.height * 0.6))) {
+		nav_display.resizeCanvas(width, globalDraw.height * 0.6);
+		display2_header.resizeCanvas(width, globalDraw.height * 0.6);
+	}
+	if (!player.display && (engine_display.height >= globalDraw.height * 0.4)) {
+		engine_display.resizeCanvas(width, globalDraw.height * 0.4);
+	}
+	if (player.display == 1 && (nav_display.height < globalDraw.height)) {
+		console.log('resizing to full');
+		nav_display.resizeCanvas(width, globalDraw.height);
+		display2_header.resizeCanvas(width, globalDraw.height);
+	}
+	if (player.display == 2 && (engine_display.height < globalDraw.height)) {
+		engine_display.resizeCanvas(width, globalDraw.height);
+	}
+	if (player.display < 2) {
+		drawMap(nav_display, width, nav_display.height);
+		draw.image(nav_display, 0, 0);
+	}
+	if (player.display == 2 || player.display == 0) {
+		drawEngine(engine_display, width, engine_display.height);
+		if (!player.display) draw.image(engine_display, 0, height * 0.6);
+		else draw.image(engine_display, 0, 0);
+	}
+}
 function update() {
+	player.engine.current_epr = 0.983 + 0.02 * Math.min(1, player.engine.current_n1 / 0.19) + 0.83 * Math.max(0, (player.engine.current_n1 - 0.19) / 0.85);
+	player.engine.cmd_n1 = player.engine.idle_n1 + player.engine.cmd_throttle * (player.engine.max_n1 - player.engine.idle_n1);
+	player.engine.cmd_epr = 1.003 + 0.83 * player.engine.cmd_throttle;
 	player.zoneX = Math.floor(player.x / 500);
 	player.zoneY = Math.floor(player.y / 500);
 	player.zoneXOffset = player.x - 500 * player.zoneX;
 	player.zoneYOffset = player.y - 500 * player.zoneY;
 	draw.clear();
-	drawMap(display2, width / 2, height * 0.75);
+	drawDisplay(display2, width / 2, height);
 	draw.image(display1, 0, 0);
 	draw.image(display2, width / 2, 0);
 }
+function keydown(ev) {
+	if (ev.keyCode == 86) {
+		player.display += 1;
+		if (player.display > 2) player.display = 0;
+	}
+}
+addEventListener('keydown', keydown);
 var player = {
 	x: 0,
 	y: 0,
 	heading: 0,
-	map_range: 688.5,
+	map_range: 648 * 0.85,
 	map_texture: '',
+	display: 0,
+	engine: {
+		idle_n1: 0.19,
+		max_n1: 1.04,
+		idle_ff: 1000,
+		max_ff: 10000,
+		current_n1: 0.19,
+		current_n2: 1.002,
+		current_ff: 1000,
+		current_epr: 1.003,
+		max_n2: 1.002,
+		min_n2: 0,
+		cmd_throttle: 0,
+		cmd_n1: 0,
+		cmd_epr: 0
+	}
 }
 var waypoints = {};
 var textures = {};
@@ -147,12 +327,22 @@ var s = function (sketch) {
 		draw.angleMode(draw.DEGREES);
 		updateInterval = setInterval(update, 1000 / 24);
 		display1 = draw.createGraphics(width / 2, height);
-		display2 = draw.createGraphics(width / 2, height * 0.75);
+		display2 = draw.createGraphics(width / 2, height);
 		display2.textFont('consolas');
 		display2.angleMode('degrees');
 		display2.background('black');
 		display2.textAlign('center', 'center');
-		display2_header = draw.createGraphics(width / 2, height * 0.75);
+		nav_display = draw.createGraphics(width / 2, height);
+		nav_display.textFont('consolas');
+		nav_display.angleMode('degrees');
+		nav_display.textAlign('center', 'center');
+		engine_display = draw.createGraphics(width / 2, height);
+		engine_display.textFont('consolas');
+		engine_display.angleMode('degrees');
+		engine_display.stroke('white');
+		engine_display.textAlign('center', 'center');
+		engine_display.textSize(15);
+		display2_header = draw.createGraphics(width / 2, height);
 	}
 };
 var draw = new p5(s, 'pad');
