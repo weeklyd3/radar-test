@@ -1,148 +1,27 @@
-function drawMap(draw, width, height) {
-	if (globalDraw.keyIsDown(173) || globalDraw.keyIsDown(61)) {
-		var currentRatio = player.map_range / (height * 0.85);
-		if (globalDraw.keyIsDown(173)) currentRatio += 0.1;
-		else currentRatio -= 0.1;
-		currentRatio = Math.round(10 * currentRatio) / 10;
-		if (currentRatio < 0.5) currentRatio = 0.5;
-		if (currentRatio > 10) currentRatio = 10;
-		player.map_range = height * 0.85 * currentRatio;
+function physics() {
+	var thrust = 2500;
+	var thrust_force = thrust * player.engine.current_n1;
+	var drag_force = drag(((player.velocity[0] ** 2) + (player.velocity[1] ** 2) ** 0.5) * 24);
+	if (player.engine.braking) thrust_force -= 1250;
+	if (player.engine.autothrottle) {
+		var thrust_required = drag_force / thrust;
+		if (thrust_required < player.engine.idle_n1) player.engine.autothrottle = false;
+		if (thrust_required > player.engine.max_n1) thrust_required = player.engine.max_n1;
+		var cmd_throttle = (thrust_required - player.engine.idle_n1) / (player.engine.max_n1 - player.engine.idle_n1);
+		player.engine.cmd_throttle = cmd_throttle;
 	}
-	display2_header.clear();
-	display2_header.fill('black');
-	display2_header.rect(0, 0, width, height);
-	display2_header.erase();
-	display2_header.circle(width / 2, height * 0.95, height * 1.7);
-	display2_header.noErase();
-	draw.clear();
-	draw.push();
-	draw.background('black');
-	var map_center = [width / 2, height * 0.95];
-	var map_heading = player.heading;
-	var map_radius = height * 0.85;
-	draw.translate(...map_center);
-	draw.rotate(-map_heading);
-	draw.fill(draw.color(0, 0, 0, 0));
-	draw.stroke('white');
-	draw.rotate(player.heading);
-	drawWaypoints(draw, width, height);
-	draw.fill(draw.color(0, 0, 0, 0));
-	draw.strokeWeight(1);
-	draw.triangle(-10, 14, 10, 14, 0, -14);
-	draw.strokeWeight(0);
-	draw.image(display2_header, -width / 2, -height * 0.95, width, height);
-	draw.rotate(-player.heading);
-	draw.stroke('white');
-	draw.fill('white');
-	draw.strokeWeight(0);
-	for (var i = 0; i < 36; i++) {
-		draw.text(i, 0, -map_radius - height * 0.01);
-		draw.rotate(10);
-	}
-	for (var i = 0; i < 36; i++) {
-		draw.strokeWeight(1);
-		draw.line(0, -map_radius, 0, -map_radius + height * 0.05);
-		draw.rotate(5);
-		draw.line(0, -map_radius, 0, -map_radius + height * 0.03);
-		draw.rotate(5);
-	}
-	draw.fill(draw.color(0, 0, 0, 0));
-	draw.stroke('white');
-	draw.circle(0, 0, map_radius * 2);
-	draw.push();
-	draw.fill('white');
-	draw.strokeWeight(0);
-	draw.textAlign('right', 'center');
-	draw.text('map zoom ×' + Math.round(10 * player.map_range / map_radius) / 10 + "\nrange " + Math.round(player.map_range) + " px", width / 2, -height * 0.85);
-	draw.pop();
-	draw.pop();
-}
-function drawEngine(draw, width, height) {
-	draw.clear();
-	draw.push();
-	draw.strokeWeight(0);
-	draw.background('black');
-	draw.fill('white');
-	var parameters = [
-		{
-			name: 'Throttle',
-			min: 0,
-			max: 100,
-			value: (player.engine.current_n1 - player.engine.idle_n1) / (player.engine.max_n1 - player.engine.idle_n1) * 100,
-			decimals: 1,
-			dial: true,
-			commanded_value: player.engine.cmd_throttle * 100
-		},
-		{
-			name: "Commanded Throttle",
-			min: 0,
-			max: 100,
-			value: player.engine.cmd_throttle * 100,
-			dial: false,
-			decimals: 1,
-			hide: player.display != 2
-		},
-		{
-			name: 'EPR',
-			min: 0.9,
-			max: 1.9,
-			value: player.engine.current_epr,
-			decimals: 3,
-			dial: true,
-			commanded_value: player.engine.cmd_epr
-		},
-		{
-			name: 'Commanded EPR',
-			min: 0.9,
-			max: 1.9,
-			value: player.engine.cmd_epr,
-			decimals: 3,
-			dial: false,
-			hide: player.display != 2
-		},
-		{
-			name: 'N1',
-			min: 0,
-			max: 104,
-			value: player.engine.current_n1 * 100,
-			decimals: 1,
-			dial: player.display == 2,
-			commanded_value: player.engine.cmd_n1
-		},
-		{
-			name: 'Commanded N1',
-			min: 0,
-			max: 104,
-			value: player.engine.cmd_n1 * 100,
-			decimals: 1,
-			dial: false,
-			hide: player.display != 2
-		},
-		{
-			name: 'N2',
-			min: 0,
-			max: 100.2,
-			value: player.engine.current_n2 * 100,
-			decimals: 1,
-			dial: player.display == 2
-		},
-		{
-			name: "Fuel per hour",
-			min: 0,
-			max: Infinity,
-			value: player.engine.current_ff,
-			decimals: 0,
-			dial: false
-		}
-	];
-	draw.translate(width / 2, 10);
-	for (const param of parameters) {
-		if (param.hide) continue;
-		draw.translate(0, param.dial ? 35 : 10);
-		drawParameter(draw, param);
-		draw.translate(0, param.dial ? 35 : 10);
-	}
-	draw.pop();
+	thrust_force -= drag_force;
+	if (thrust_force < 0) thrust_force = 0;
+	var acceleration = thrust_force / player.mass;
+	var total_velocity = (player.velocity[0] ** 2 + player.velocity[1] ** 2) ** 0.5;
+	if (player.turnRate) player.heading += player.turnRate * total_velocity / 2;
+	while (player.heading < 0) player.heading += 360;
+	while (player.heading >= 360) player.heading -= 360;
+	total_velocity += acceleration / 24;
+	var x = Math.sin(player.heading * Math.PI / 180) * total_velocity;
+	var y = -Math.cos(player.heading * Math.PI / 180) * total_velocity;
+	player.velocity[0] = x;
+	player.velocity[1] = y;
 }
 function drawParameter(draw, param) {
 	draw.textAlign('right', 'center');
@@ -158,12 +37,19 @@ function drawParameter(draw, param) {
 		draw.strokeWeight(1);
 		draw.arc(60, 0, 60, 60, 150, 30);
 		draw.translate(60, 0);
-		draw.fill('lime');
+		draw.fill('green');
 		draw.strokeWeight(0);
-		draw.circle(0, 0, 5);
 		draw.rotate(240);
+		var trend = param.hasOwnProperty('trend');
 		var rotate_amount = (param_value - param.min) / (param.max - param.min) * 240;
+		if (trend) {
+			var trend_amount = (param.trend) / (param.max - param.min) * 240 * 240 * 12;
+		}
 		draw.rotate(rotate_amount);
+		if (trend && trend_amount > 0) draw.arc(0, 0, 60, 60, 270, 270 + trend_amount);
+		if (trend && trend_amount < 0) draw.arc(0, 0, 60, 60, 270 + trend_amount, 270);
+		draw.fill('lime');
+		draw.circle(0, 0, 5);
 		draw.rect(-1, -30, 2, 30)
 		draw.rotate(-rotate_amount);
 		draw.fill('white');
@@ -274,9 +160,32 @@ function drawDisplay(draw, width, height) {
 	}
 }
 function update() {
+	physics();
+	player.x += player.velocity[0];
+	player.y += player.velocity[1];
+	if (draw.keyIsDown(37) || draw.keyIsDown(39)) {
+		var amount = 0.05;
+		if (draw.keyIsDown(39)) player.turnRate += amount;
+		if (draw.keyIsDown(37)) player.turnRate -= amount;
+		if (player.turnRate > player.maxTurnRate) player.turnRate = player.maxTurnRate;
+		if (player.turnRate < -player.maxTurnRate) player.turnRate = -player.maxTurnRate;
+	}
+	player.engine.braking = false;
+	if (draw.keyIsDown(38) || draw.keyIsDown(40)) {
+		var amount = 0.01;
+		if (draw.keyIsDown(16)) amount = 0.001;
+		if (draw.keyIsDown(38)) player.engine.cmd_throttle += amount;
+		if (draw.keyIsDown(40)) {
+			player.engine.cmd_throttle -= amount;
+			if (player.engine.current_n1 <= player.engine.idle_n1) player.engine.braking = true;
+		}
+		if (player.engine.cmd_throttle > 1) player.engine.cmd_throttle = 1;
+		if (player.engine.cmd_throttle < 0) player.engine.cmd_throttle = 0;
+	}
 	player.engine.current_epr = 0.983 + 0.02 * Math.min(1, player.engine.current_n1 / 0.19) + 0.83 * Math.max(0, (player.engine.current_n1 - 0.19) / 0.85);
 	player.engine.cmd_n1 = player.engine.idle_n1 + player.engine.cmd_throttle * (player.engine.max_n1 - player.engine.idle_n1);
 	player.engine.cmd_epr = 1.003 + 0.83 * player.engine.cmd_throttle;
+	player.engine.current_n1 += player.engine.trend_n1;
 	player.zoneX = Math.floor(player.x / 500);
 	player.zoneY = Math.floor(player.y / 500);
 	player.zoneXOffset = player.x - 500 * player.zoneX;
@@ -285,37 +194,39 @@ function update() {
 	drawDisplay(display2, width / 2, height);
 	draw.image(display1, 0, 0);
 	draw.image(display2, width / 2, 0);
+	if (Math.abs(player.engine.cmd_n1 - player.engine.current_n1) <= 0.005) {
+		player.engine.current_n1 = player.engine.cmd_n1;
+		player.engine.trend_n1 = 0;
+	}
+	if (Math.abs(player.engine.cmd_n1 - player.engine.current_n1) > 0.005 || Math.abs(player.engine.trend_n1) > 0.001) {
+		var simulated_trend = player.engine.trend_n1;
+		var stopping_distance = 0;
+		while (Math.abs(simulated_trend) > 0.001) {
+			stopping_distance += simulated_trend;
+			if (simulated_trend > player.engine.max_trend_change_n1) simulated_trend -= player.engine.max_trend_change_n1;
+			else if (simulated_trend < -player.engine.max_trend_change_n1) simulated_trend += player.engine.max_trend_change_n1;
+			else simulated_trend = 0;
+		}
+		if (Math.abs(stopping_distance * 1.01) > Math.abs(player.engine.cmd_n1 - player.engine.current_n1)) {
+			if (player.engine.trend_n1 < -player.engine.max_trend_change_n1) player.engine.trend_n1 += player.engine.max_trend_change_n1;
+			else if (player.engine.trend_n1 > player.engine.max_trend_change_n1) player.engine.trend_n1 -= player.engine.max_trend_change_n1;
+			else player.engine.trend_n1 = 0;
+		} else {
+			if (player.engine.cmd_n1 < player.engine.current_n1) player.engine.trend_n1 -= player.engine.max_trend_change_n1;
+			else player.engine.trend_n1 += player.engine.max_trend_change_n1;
+			if (player.engine.trend_n1 > player.engine.max_trend_n1) player.engine.trend_n1 = player.engine.max_trend_n1;
+			if (player.engine.trend_n1 < -player.engine.max_trend_n1) player.engine.trend_n1 = -player.engine.max_trend_n1;
+		}
+	}
 }
 function keydown(ev) {
+	if (ev.keyCode == 67) player.engine.autothrottle = !player.engine.autothrottle;
 	if (ev.keyCode == 86) {
 		player.display += 1;
 		if (player.display > 2) player.display = 0;
 	}
 }
 addEventListener('keydown', keydown);
-var player = {
-	x: 0,
-	y: 0,
-	heading: 0,
-	map_range: 648 * 0.85,
-	map_texture: '',
-	display: 0,
-	engine: {
-		idle_n1: 0.19,
-		max_n1: 1.04,
-		idle_ff: 1000,
-		max_ff: 10000,
-		current_n1: 0.19,
-		current_n2: 1.002,
-		current_ff: 1000,
-		current_epr: 1.003,
-		max_n2: 1.002,
-		min_n2: 0,
-		cmd_throttle: 0,
-		cmd_n1: 0,
-		cmd_epr: 0
-	}
-}
 var waypoints = {};
 var textures = {};
 var waypointsToLoad = [];
