@@ -104,15 +104,15 @@ function loadZone(name) {
 	var y = Number(numbers[1]);
 	if (x < -10 || x > 10) return;
 	if (y < -10 || y > 10) return;
-	if (localStorage.getItem("points-" + name)) {
-		waypoints[name] = JSON.parse(localStorage.getItem("points-" + name));
+	if (localStorage.getItem("RADARTEST-points-" + name)) {
+		waypoints[name] = JSON.parse(localStorage.getItem("RADARTEST-points-" + name));
 		return;
 	}
 	fetch("points/" + name + ".json")
 		.then((s) => s.json())
 		.then((s) => {
 			waypoints[name] = s;
-			localStorage.setItem("points-" + name, JSON.stringify(s));
+			localStorage.setItem("RADARTEST-points-" + name, JSON.stringify(s));
 		});
 }
 function drawWaypoints(draw, width, height) {
@@ -283,6 +283,7 @@ function update() {
 	}
 	draw.clear();
 	drawDisplay(display2, width / 2, height);
+	drawLeftDisplay(display1, width / 2, height);
 	draw.image(display1, 0, 0);
 	draw.image(display2, width / 2, 0);
 	if (Math.abs(player.engine.cmd_n1 - player.engine.current_n1) <= 0.005) {
