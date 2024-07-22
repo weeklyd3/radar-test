@@ -1,16 +1,20 @@
 from PIL import Image
 import numpy as np
-from json import loads
+from json import loads, dumps
 def value_to_color(value, max_value):
    if value > max_value: value = max_value
    value = 1 - (value / max_value)
    return (127 * 2 * (max(value, 0.5) - 0.5), 0, 127 * 2 * min(value, 0.5))
 all_waypoints = []
+all_waypoints_dict = {}
 for i in range(-10, 11):
    for j in range(-10, 11):
       file = open(f'points/{i},{j}.json', 'r+').read()
       waypoint_list = loads(file)
-      for w in waypoint_list: all_waypoints.append(w)
+      for w in waypoint_list: 
+         all_waypoints_dict[w['name']] = w
+         all_waypoints.append(w)
+open('all_points.json', 'w+').write(dumps(all_waypoints_dict))
 for i in range(-10, 11):
    for j in range(-10, 11):
       tilex = i * 500
