@@ -256,21 +256,21 @@ function update() {
 	player.x += player.velocity[0];
 	player.y += player.velocity[1];
 	if (player.display != 3) {
-		if (draw.keyIsDown(37) || draw.keyIsDown(39)) {
+		if (draw.keyIsDown(37) || draw.keyIsDown(39) || draw.keyIsDown(68) || draw.keyIsDown(65)) {
 			var amount = 0.05;
-			if (draw.keyIsDown(39)) player.turnRate += amount;
-			if (draw.keyIsDown(37)) player.turnRate -= amount;
+			if (draw.keyIsDown(39) || draw.keyIsDown(68)) player.turnRate += amount;
+			if (draw.keyIsDown(37) || draw.keyIsDown(65)) player.turnRate -= amount;
 			if (player.turnRate < -player.maxTurnRate)
 				player.turnRate = -player.maxTurnRate;
 			if (player.turnRate > player.maxTurnRate)
 				player.turnRate = player.maxTurnRate;
 		}
 		player.engine.braking = false;
-		if (draw.keyIsDown(38) || draw.keyIsDown(40)) {
+		if (draw.keyIsDown(38) || draw.keyIsDown(40) || draw.keyIsDown(87) || draw.keyIsDown(83)) {
 			var amount = 0.01;
 			if (draw.keyIsDown(16)) amount = 0.001;
-			if (draw.keyIsDown(38)) player.engine.cmd_throttle += amount;
-			if (draw.keyIsDown(40)) {
+			if (draw.keyIsDown(38) || draw.keyIsDown(87)) player.engine.cmd_throttle += amount;
+			if (draw.keyIsDown(40) || draw.keyIsDown(83)) {
 				player.engine.cmd_throttle -= amount;
 				if (player.engine.current_n1 <= player.engine.idle_n1)
 					player.engine.braking = true;
@@ -364,6 +364,7 @@ function update() {
 }
 function keydown(ev) {
 	if (player.display == 3) return;
+	if (ev.keyCode == 79) player.full_map = !player.full_map;
 	if (ev.keyCode == 80) player.autopilot = !player.autopilot;
 	if (ev.keyCode == 67)
 		player.engine.autothrottle = !player.engine.autothrottle;
@@ -374,7 +375,10 @@ function keydown(ev) {
 	if (ev.keyCode == 66)
 		player.engine.parking_brake = !player.engine.parking_brake;
 }
+var click = false;
 addEventListener("keydown", keydown);
+addEventListener('mousedown', () => click = true);
+addEventListener('mouseup', () => click = false);
 var waypoints = {};
 var all_waypoints = {};
 fetch("all_points.json")

@@ -13,6 +13,16 @@ var player = {
 	route_points: [],
 	water_on_map: false,
 	full_map: false,
+	bullets: [],
+	gun: {
+		ammoLeft: 100,
+		reloadPeriod: 96,
+		reload: 0,
+		speed: 1,
+		size: 10,
+		lifetime: 200,
+		color: 'green'
+	},
 	engine: {
 		autopilot: false,
 		parking_brake: true,

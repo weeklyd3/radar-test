@@ -49,6 +49,21 @@ function drawLeftDisplay(draw, width, height) {
 		draw.fill(p.color);
 		draw.circle(p.x - player.x, p.y - player.y, p.size);
 	}
+	player.bullets = player.bullets.filter((a) => !a.invalid);
+	if (click) player.bullets.push({
+		x: player.x,
+		y: player.y,
+		heading: player.heading,
+		speed: player.gun.speed,
+		lifetime: player.gun.lifetime,
+		color: player.gun.color,
+		size: player.gun.size
+	})
+	for (const p of player.bullets) {
+		particlePhysics(p);
+		draw.fill(p.color ?? (p.enemy ? 'red': 'blue'));
+		draw.circle(p.x - player.x, p.y - player.y, p.size);
+	}
 	draw.pop();
 }
 var exhaustParticles = [];
