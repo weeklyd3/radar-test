@@ -419,6 +419,7 @@ var s = function (sketch) {
 		menu_display.textSize(15);
 		loaded_images.ship = draw.loadImage('actually_useful_images/ship.svg');
 		loaded_images.engine = draw.loadImage('actually_useful_images/engine.svg');
+		loaded_images.cannon = draw.loadImage('actually_useful_images/cannon.svg');
 	};
 };
 var draw = new p5(s, "pad");

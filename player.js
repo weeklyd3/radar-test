@@ -18,7 +18,7 @@ var player = {
 		ammoLeft: 100,
 		reloadPeriod: 96,
 		reload: 0,
-		speed: 1,
+		speed: 10,
 		size: 10,
 		lifetime: 200,
 		color: 'green'

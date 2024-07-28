@@ -7,10 +7,15 @@ function drawLeftDisplay(draw, width, height) {
 	draw.translate(width / 2, height / 2);
 	draw.image(loaded_images.ship, -25, -37.5);
 	draw.push();
+	draw.push();
 	draw.translate(0, 35);
 	var engine_turn = -40 * player.turnRate / player.maxTurnRate;
 	draw.rotate(engine_turn);
 	draw.image(loaded_images.engine, -7.5, -15);
+	var cannon_angle = (Math.atan2(height / 2 - globalDraw.mouseY, -width / 2 + globalDraw.mouseX) * 180 / Math.PI + 270) % 360;
+	draw.pop();
+	draw.rotate(-cannon_angle);
+	draw.image(loaded_images.cannon, -12.5, -60 + 12.5);
 	draw.pop();
 	draw.rotate(-player.heading);
 	draw.strokeWeight(0);
@@ -50,15 +55,18 @@ function drawLeftDisplay(draw, width, height) {
 		draw.circle(p.x - player.x, p.y - player.y, p.size);
 	}
 	player.bullets = player.bullets.filter((a) => !a.invalid);
-	if (click) player.bullets.push({
-		x: player.x,
-		y: player.y,
-		heading: player.heading,
-		speed: player.gun.speed,
-		lifetime: player.gun.lifetime,
-		color: player.gun.color,
-		size: player.gun.size
-	})
+	if (click) {
+		var position = rotatePoint([player.x, player.y - 60 + 12.5], [player.x, player.y], player.heading - cannon_angle);
+		player.bullets.push({
+			x: position[0],
+			y: position[1],
+			heading: player.heading - cannon_angle,
+			speed: player.gun.speed,
+			lifetime: player.gun.lifetime,
+			color: player.gun.color,
+			size: player.gun.size
+		})
+	}
 	for (const p of player.bullets) {
 		particlePhysics(p);
 		draw.fill(p.color ?? (p.enemy ? 'red': 'blue'));
