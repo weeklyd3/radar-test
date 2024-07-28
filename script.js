@@ -4,7 +4,8 @@ function physics() {
 	var drag_force = drag(
 		(player.velocity[0] ** 2 + player.velocity[1] ** 2) ** 0.5 * 24,
 	);
-	if (player.engine.parking_brake && player.engine.current_n1 > 0.3) player.engine.parking_brake = false;
+	if (player.engine.parking_brake && player.engine.current_n1 > 0.3)
+		player.engine.parking_brake = false;
 	if (player.engine.braking) thrust_force -= 10000;
 	if (player.engine.parking_brake) thrust_force -= 100000;
 	if (player.engine.autothrottle) {
@@ -105,7 +106,9 @@ function loadZone(name) {
 	if (x < -10 || x > 10) return;
 	if (y < -10 || y > 10) return;
 	if (localStorage.getItem("RADARTEST-points-" + name)) {
-		waypoints[name] = JSON.parse(localStorage.getItem("RADARTEST-points-" + name));
+		waypoints[name] = JSON.parse(
+			localStorage.getItem("RADARTEST-points-" + name),
+		);
 		return;
 	}
 	fetch("points/" + name + ".json")
@@ -116,12 +119,18 @@ function loadZone(name) {
 		});
 }
 function drawWaypoints(draw, width, height) {
-	var ratio = (height * 0.85) / player.map_range;
+	var ratio = (player.full_map ? height * 0.425 : height * 0.85) / player.map_range;
+	if (player.water_on_map) {
+		draw.fill('blue');
+		draw.circle(0, 0, player.full_map ? height * 8 : height * 1.7);
+	}
+	var realMapRange;
+	if (player.full_map) realMapRange = (((width / 2) ** 2 + (height / 2) ** 2) ** 0.5) / ratio;
+	else realMapRange = player.map_range;
 	draw.fill("lime");
 	draw.strokeWeight(0);
 	var position = [player.x, player.y];
-	var range = player.map_range;
-	var offset = Math.ceil(range / 500);
+	var offset = Math.ceil(realMapRange / 500);
 	var min_range = [player.zoneX - offset, player.zoneY - offset];
 	var max_range = [player.zoneX + offset, player.zoneY + offset];
 	for (var x = min_range[0]; x <= max_range[0]; x++) {
@@ -148,10 +157,8 @@ function drawWaypoints(draw, width, height) {
 				loadZone(x + "," + y);
 			} else {
 				for (const wpt of waypoints[x + "," + y]) {
-					var distance =
-						((player.x - wpt.x) ** 2 + (player.y - wpt.y) ** 2) **
-						0.5;
-					if (distance > player.map_range) continue;
+					var distance = ((player.x - wpt.x) ** 2 + (player.y - wpt.y) ** 2) ** 0.5;
+					if (distance > realMapRange) continue;
 					var angle =
 						(Math.atan2(player.y - wpt.y, wpt.x - player.x) * 180) /
 						Math.PI;
@@ -161,28 +168,41 @@ function drawWaypoints(draw, width, height) {
 					var dy = -distance * Math.sin(angle_rad);
 					dx *= ratio;
 					dy *= ratio;
+					if (player.water_on_map) {
+						draw.fill('#4c3924');
+						draw.circle(dx, dy, 60 * ratio);
+					}
 					if (player.route_points.includes(wpt.name)) {
+						draw.fill("yellow");
+						draw.circle(dx, dy, 8);
+						draw.strokeWeight(1);
+						draw.stroke('yellow');
+						draw.fill(draw.color(0, 0, 0, 0));
+						draw.circle(dx, dy, 60 * ratio);
+						draw.strokeWeight(0);
 						draw.fill('yellow');
-						draw.circle(dx, dy, 6);
 					} else {
+						draw.fill('lime');
 						draw.circle(dx, dy, 3);
 					}
 					draw.text(wpt.name.toUpperCase(), dx, dy + 10);
-					draw.fill('lime');
+					draw.fill("lime");
 				}
 			}
 		}
 	}
 	draw.push();
-	draw.stroke('yellow');
+	draw.stroke("yellow");
 	draw.strokeWeight(3);
 	var previous_position = [0, 0];
 	for (const r of player.route) {
 		var heading = r.heading - player.heading;
 		var distance = r.distance;
 		var calibratedPosition = [
-			 distance * Math.sin(heading * Math.PI / 180) * ratio + previous_position[0],
-			-distance * Math.cos(heading * Math.PI / 180) * ratio + previous_position[1]
+			distance * Math.sin((heading * Math.PI) / 180) * ratio +
+				previous_position[0],
+			-distance * Math.cos((heading * Math.PI) / 180) * ratio +
+				previous_position[1],
 		];
 		draw.line(...previous_position, ...calibratedPosition);
 		previous_position = calibratedPosition;
@@ -225,7 +245,11 @@ function update() {
 		if (!player.route.length) player.autopilot = false;
 		else {
 			var required_heading = player.route[0].heading;
-			player.turnRate = (required_heading - player.heading) / 50;
+			// https://stackoverflow.com/a/60237892/15578194
+			var rightTurn = ((360 + player.heading - required_heading) % 360) > 180;
+			if (rightTurn) diff_angle = (360 - player.heading + required_heading) % 360;
+			else diff_angle = -((360 + player.heading - required_heading) % 360);
+			player.turnRate = diff_angle / 50;
 		}
 	}
 	physics();
@@ -236,8 +260,10 @@ function update() {
 			var amount = 0.05;
 			if (draw.keyIsDown(39)) player.turnRate += amount;
 			if (draw.keyIsDown(37)) player.turnRate -= amount;
-			if (player.turnRate < -player.maxTurnRate) player.turnRate = -player.maxTurnRate;
-			if (player.turnRate > player.maxTurnRate) player.turnRate = player.maxTurnRate;
+			if (player.turnRate < -player.maxTurnRate)
+				player.turnRate = -player.maxTurnRate;
+			if (player.turnRate > player.maxTurnRate)
+				player.turnRate = player.maxTurnRate;
 		}
 		player.engine.braking = false;
 		if (draw.keyIsDown(38) || draw.keyIsDown(40)) {
@@ -269,16 +295,28 @@ function update() {
 	player.zoneYOffset = player.y - 500 * player.zoneY;
 	var first_point = player.route[0];
 	if (first_point) {
-		first_point.distance = ((first_point.x - player.x) ** 2 + (first_point.y - player.y) ** 2) ** 0.5;
-		first_point.heading = Math.atan2(first_point.x - player.x, -first_point.y + player.y) * 180 / Math.PI;
+		first_point.distance =
+			((first_point.x - player.x) ** 2 +
+				(first_point.y - player.y) ** 2) **
+			0.5;
+		first_point.heading =
+			(Math.atan2(first_point.x - player.x, -first_point.y + player.y) *
+				180) /
+			Math.PI;
 	}
 	for (const r of player.route) {
 		if (r.heading < 0) r.heading += 360;
 	}
 	var first_point = player.route[0];
-	if (first_point && ((first_point.x - player.x) ** 2 + (first_point.y - player.y) ** 2) ** 0.5 < 30) {
+	if (
+		first_point &&
+		((first_point.x - player.x) ** 2 + (first_point.y - player.y) ** 2) **
+			0.5 <
+			30
+	) {
 		var name = first_point.name.toLowerCase();
-		if (player.route_points.indexOf(name) > -1) player.route_points.splice(player.route_points.indexOf(name), 1);
+		if (player.route_points.indexOf(name) > -1)
+			player.route_points.splice(player.route_points.indexOf(name), 1);
 		player.route.splice(0, 1);
 	}
 	draw.clear();
@@ -333,7 +371,8 @@ function keydown(ev) {
 		player.display += 1;
 		if (player.display > 3) player.display = 0;
 	}
-	if (ev.keyCode == 66) player.engine.parking_brake = !player.engine.parking_brake;
+	if (ev.keyCode == 66)
+		player.engine.parking_brake = !player.engine.parking_brake;
 }
 addEventListener("keydown", keydown);
 var waypoints = {};
@@ -351,6 +390,7 @@ var s = function (sketch) {
 		draw.angleMode(draw.DEGREES);
 		updateInterval = setInterval(update, 1000 / 24);
 		display1 = draw.createGraphics(width / 2, height);
+		display1.angleMode('degrees');
 		display2 = draw.createGraphics(width / 2, height);
 		display2.textFont("consolas");
 		display2.angleMode("degrees");
@@ -373,6 +413,8 @@ var s = function (sketch) {
 		menu_display.stroke("white");
 		menu_display.textAlign("center", "center");
 		menu_display.textSize(15);
+		loaded_images.ship = draw.loadImage('actually_useful_images/ship.svg');
+		loaded_images.engine = draw.loadImage('actually_useful_images/engine.svg');
 	};
 };
 var draw = new p5(s, "pad");

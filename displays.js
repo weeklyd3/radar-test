@@ -1,26 +1,28 @@
 function drawMap(draw, width, height) {
+	var map_radius = height * 0.85;
+	if (player.full_map) map_radius = height * 0.425;
 	if (globalDraw.keyIsDown(173) || globalDraw.keyIsDown(61)) {
-		var currentRatio = player.map_range / (height * 0.85);
+		var currentRatio = player.map_range / (map_radius);
 		if (globalDraw.keyIsDown(173)) currentRatio += 0.1;
 		else currentRatio -= 0.1;
 		currentRatio = Math.round(10 * currentRatio) / 10;
 		if (currentRatio < 0.5) currentRatio = 0.5;
 		if (currentRatio > 10) currentRatio = 10;
-		player.map_range = height * 0.85 * currentRatio;
+		player.map_range = map_radius * currentRatio;
 	}
-	if (player.map_range > (height * 8.5)) player.map_range = height * 8.5;
+	if (player.map_range > (map_radius * 10)) player.map_range = map_radius * 10;
 	display2_header.clear();
 	display2_header.fill('black');
 	display2_header.rect(0, 0, width, height);
 	display2_header.erase();
-	display2_header.circle(width / 2, height * 0.95, height * 1.7);
+	var map_center = [width / 2, height * 0.95];
+	if (player.full_map) map_center[1] -= height * 0.425;
+	display2_header.circle(...map_center, player.full_map ? map_radius * 8 : map_radius * 2);
 	display2_header.noErase();
 	draw.clear();
 	draw.push();
 	draw.background('black');
-	var map_center = [width / 2, height * 0.95];
 	var map_heading = player.heading;
-	var map_radius = height * 0.85;
 	draw.translate(...map_center);
 	draw.rotate(-map_heading);
 	draw.fill(draw.color(0, 0, 0, 0));
@@ -32,7 +34,7 @@ function drawMap(draw, width, height) {
 	draw.stroke('white');
 	draw.triangle(-10, 14, 10, 14, 0, -14);
 	draw.strokeWeight(0);
-	draw.image(display2_header, -width / 2, -height * 0.95, width, height);
+	draw.image(display2_header, -width / 2, -map_center[1], width, height);
 	draw.rotate(-player.heading);
 	draw.stroke('white');
 	draw.fill('white');
@@ -50,27 +52,27 @@ function drawMap(draw, width, height) {
 	}
 	draw.fill(draw.color(0, 0, 0, 0));
 	draw.stroke('white');
-	draw.circle(0, 0, map_radius * 2);
+	if (!player.full_map) draw.circle(0, 0, map_radius * 2);
 	draw.push();
 	draw.rotate(player.heading);
 	if (player.route.length) {
 		draw.fill('yellow');
 		draw.rotate(player.route[0].heading - player.heading);
-		draw.rect(-width / 26, -height * 0.85 - 12, width / 13, 12);
+		draw.rect(-width / 26, -map_radius - 12, width / 13, 12);
 		draw.strokeWeight(0);
 		draw.fill('black');
-		draw.text(Math.round(player.route[0].heading), 0, -height * 0.85 - 6);
+		draw.text(Math.round(player.route[0].heading), 0, -map_radius - 6);
 		draw.rotate(-player.route[0].heading + player.heading);
 	}
 	draw.strokeWeight(1);
 	draw.fill('magenta');
-	draw.rect(-width / 26, -height * 0.85 - 12, width / 13, 12);
+	draw.rect(-width / 26, -map_radius - 12, width / 13, 12);
 	draw.stroke('magenta');
 	draw.line(0, -14, 0, -map_radius);
 	draw.stroke('white');
 	draw.fill('black');
 	draw.strokeWeight(0);
-	draw.text(Math.round(player.heading), 0, -height * 0.85 - 6);
+	draw.text(Math.round(player.heading), 0, -map_radius - 6);
 	draw.fill('white');
 	draw.textAlign('right', 'center');
 	var waypoint_info = '';
@@ -78,17 +80,17 @@ function drawMap(draw, width, height) {
 		const wpt = player.route[0];
 		waypoint_info = `${wpt.name} ${Math.round(wpt.heading)}deg ${(wpt.distance / 1000).toFixed(2)}mi\n`
 	}
-	draw.text(waypoint_info + 'map zoom ×' + Math.round(10 * player.map_range / map_radius) / 10 + "\nrange " + Math.round(player.map_range) + " px", width / 2, -height * 0.83);
+	draw.text(waypoint_info + 'map zoom ×' + Math.round(10 * player.map_range / map_radius) / 10 + "\nrange " + Math.round(player.map_range) + " px", width / 2, -map_radius + height * 0.02);
 	draw.textAlign('left', 'center');
-	draw.text(`${player.autopilot ? "AUTOPILOT " : "MANUAL RUD "}| ${player.engine.autothrottle ? "CRUISE CTRL" : "MANUAL THR"}\n${player.engine.parking_brake ? "PARKING BRAKE!!! [b]\n" : ""}${Math.round((player.velocity[0] ** 2 + player.velocity[1] ** 2) ** 0.5 * 24 / 1000 * 3600)} mph\nthr ${Math.round(3500 * player.engine.current_n1)}\ndrag ${Math.round(drag((player.velocity[0] ** 2 + player.velocity[1] ** 2) ** 0.5) * 24 * 24)}`, -width / 2, -height * 0.83);
-	draw.rect(-width / 6, -height * 0.93, width / 3, 2);
-	draw.rect(-width / 6, -height * 0.93, 2, 10);
-	draw.rect(width / 6 - 2, -height * 0.93, 2, 10);
-	draw.rect(-1, -height * 0.93, 2, 10);
+	draw.text(`${player.autopilot ? "AUTOPILOT " : "MANUAL RUD "}| ${player.engine.autothrottle ? "CRUISE CTRL" : "MANUAL THR"}\n${player.engine.parking_brake ? "PARKING BRAKE!!! [b]\n" : ""}${Math.round((player.velocity[0] ** 2 + player.velocity[1] ** 2) ** 0.5 * 24 / 1000 * 3600)} mph\nthr ${Math.round(3500 * player.engine.current_n1)}\ndrag ${Math.round(drag((player.velocity[0] ** 2 + player.velocity[1] ** 2) ** 0.5) * 24 * 24)}`, -width / 2, -map_radius + height * 0.02);
+	draw.rect(-width / 6, -height * 0.08 - map_radius, width / 3, 2);
+	draw.rect(-width / 6, -height * 0.08 - map_radius, 2, 10);
+	draw.rect(width / 6 - 2, -height * 0.08 - map_radius, 2, 10);
+	draw.rect(-1, -height * 0.08 - map_radius, 2, 10);
 	draw.fill('magenta');
 	if (player.engine.braking) draw.fill('yellow');
 	var x_rudder = (player.turnRate / player.maxTurnRate) * width / 6;
-	draw.triangle(x_rudder, -height * 0.92, x_rudder - 5, -height * 0.9, x_rudder + 5, -height * 0.9);
+	draw.triangle(x_rudder, -map_radius - height * 0.07, x_rudder - 5, -map_radius - height * 0.05, x_rudder + 5, -map_radius - height * 0.05);
 	draw.pop();
 	draw.pop();
 }

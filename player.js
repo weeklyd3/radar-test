@@ -11,6 +11,8 @@ var player = {
 	mass: 54000,
 	route: [],
 	route_points: [],
+	water_on_map: false,
+	full_map: false,
 	engine: {
 		autopilot: false,
 		parking_brake: true,
@@ -33,3 +35,4 @@ var player = {
 		cmd_epr: 0
 	}
 }
+var loaded_images = {};
