@@ -61,7 +61,7 @@ function drawLeftDisplay(draw, width, height) {
 			x: position[0],
 			y: position[1],
 			heading: player.heading - cannon_angle,
-			speed: player.gun.speed,
+			speed: player.gun.speed + (Math.random() - 0.5) * player.gun.speedRandom,
 			lifetime: player.gun.lifetime,
 			color: player.gun.color,
 			size: player.gun.size
@@ -72,6 +72,70 @@ function drawLeftDisplay(draw, width, height) {
 		draw.fill(p.color ?? (p.enemy ? 'red': 'blue'));
 		draw.circle(p.x - player.x, p.y - player.y, p.size);
 	}
+	draw.pop();
+	draw.push();
+	draw.translate(width / 2, height / 2);
+	draw.translate(0, height / 2 - width * 0.15);
+	draw.fill('black');
+	draw.rect(-width / 2, -width * 0.15, width * 0.7, width * 0.3);
+	draw.fill('white');
+	draw.rect(-width / 2 + width * 0.35 - 1, -width * 0.1, 2, width * 0.3);
+	const selectedQuestName = player.quest_list[player.selected_quest];
+	var activeQuest = quests[selectedQuestName];
+	var activeQuestProgress = player.quests[selectedQuestName];
+	draw.textAlign('left', 'top');
+	if (activeQuestProgress[1]) {
+		draw.fill('cyan');
+		draw.rect(-width / 2, -width * 0.125 - 1, width / 2, 2);
+	}
+	draw.textSize(width * 0.03);
+	draw.text(activeQuest.name, -width / 2, -width * 0.14);
+	draw.textAlign('right', 'top');
+	draw.text(`${player.selected_quest + 1}/${player.quest_list.length}`, width * 0.2, -width * 0.14);
+	draw.textAlign('left', 'top');
+	draw.textSize(9);
+	draw.text(activeQuest.body, -width / 2, -width * 0.1, width * 0.35, width * 0.3);
+	var index = 0;
+	for (const obj of activeQuest.objectives) {
+		if (getBit(activeQuestProgress[0], index)) {
+			draw.fill('cyan');
+			draw.rect(-width / 2 + width * 0.35 + 2, -width * 0.1 + 15 * index, 10, 10);
+			draw.rect(-width / 2 + width * 0.35 + 2, -width * 0.1 + 15 * index + 15 / 4, width * 0.325, 2);
+		}
+		else {
+			draw.fill('lime');
+			draw.circle(-width / 2 + width * 0.35 + 7, -width * 0.1 + 15 * index + 5, 5);
+		}
+		draw.text(obj.body, -width / 2 + width * 0.35 + 12, -width * 0.1 + 15 * index);
+		index += 1;
+	}
+	draw.translate(width * 0.35, 0);
+	draw.fill('lightgray');
+	draw.arc(0, 0, width * 0.3, width * 0.3, 255, 285);
+	draw.fill('gray');
+	draw.circle(0, 0, width * 0.25);
+	draw.strokeWeight(1);
+	draw.stroke('white');
+	draw.textSize(width * 0.03);
+	draw.fill('black');
+	draw.rotate(-player.heading);
+	var text;
+	draw.textAlign('center', 'center');
+	for (var i = 0; i < 36; i++) {
+		draw.line(0, -width * 0.1, 0, -width * 0.125);
+		text = '';
+		if (i == 0) text = 'N';
+		if (i == 9) text = 'E';
+		if (i == 18) text = 'S';
+		if (i == 27) text = 'W';
+		if (text) draw.text(text, 0, -width * 0.08);
+		draw.rotate(10);
+	}
+	draw.rotate(player.heading);
+	draw.fill('magenta');
+	draw.triangle(0, -8, 6, 5, -6, 5);
+	draw.stroke('magenta');
+	draw.line(0, 0, 0, -width * 0.1);
 	draw.pop();
 }
 var exhaustParticles = [];

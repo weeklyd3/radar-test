@@ -14,11 +14,20 @@ var player = {
 	water_on_map: false,
 	full_map: false,
 	bullets: [],
+	// quests: lists all the quests given
+	// the number indicates objectives completed
+	// indicated using binary, first objective is last digit
+	// second one complete but not first = 2
+	// boolean indicates overall quest completion
+	selected_quest: 0,
+	quests: {"navigation": [0, false]},
+	quest_list: ['navigation'],
 	gun: {
 		ammoLeft: 100,
 		reloadPeriod: 96,
 		reload: 0,
 		speed: 10,
+		speedRandom: 0,
 		size: 10,
 		lifetime: 200,
 		color: 'green'
@@ -43,6 +52,14 @@ var player = {
 		cmd_throttle: 0,
 		cmd_n1: 0,
 		cmd_epr: 0
+	}
+}
+if (localStorage.getItem('RADARTEST-save')) {
+	try {
+		var saved = JSON.parse(localStorage.getItem('RADARTEST-save'));
+		player = saved;
+	} catch (e) {
+		alert('INVALID SAVE! error: \n' + e.toString());
 	}
 }
 var loaded_images = {};

@@ -1,3 +1,4 @@
+var save_frame_count = 0;
 function physics() {
 	var thrust = 3500;
 	var thrust_force = thrust * player.engine.current_n1;
@@ -240,7 +241,14 @@ function drawDisplay(draw, width, height) {
 		draw.image(menu_display, 0, 0);
 	}
 }
+function save() {
+	var json = JSON.stringify(player);
+	localStorage.setItem('RADARTEST-save', json);
+}
 function update() {
+	save_frame_count++;
+	if ((save_frame_count % 100) == 0) save();
+	player.speed = (player.velocity[0] ** 2 + player.velocity[1] ** 2) ** 0.5;
 	if (player.autopilot) {
 		if (!player.route.length) player.autopilot = false;
 		else {
@@ -320,6 +328,7 @@ function update() {
 		player.route.splice(0, 1);
 	}
 	draw.clear();
+	updateQuests();
 	drawDisplay(display2, width / 2, height);
 	drawLeftDisplay(display1, width / 2, height);
 	draw.image(display1, 0, 0);
@@ -364,6 +373,10 @@ function update() {
 }
 function keydown(ev) {
 	if (player.display == 3) return;
+	if (ev.keyCode == 33) player.selected_quest -= 1;
+	if (ev.keyCode == 34) player.selected_quest += 1;
+	if (player.selected_quest < 0) player.selected_quest = player.quest_list.length - 1;
+	if (player.selected_quest >= player.quest_list.length) player.selected_quest = 0;
 	if (ev.keyCode == 79) player.full_map = !player.full_map;
 	if (ev.keyCode == 80) player.autopilot = !player.autopilot;
 	if (ev.keyCode == 67)
@@ -395,6 +408,10 @@ var s = function (sketch) {
 		updateInterval = setInterval(update, 1000 / 24);
 		display1 = draw.createGraphics(width / 2, height);
 		display1.angleMode('degrees');
+		display1.textWrap('WORD');
+		display1.textSize(9);
+		display1.textAlign('left', 'top');
+		// display1.textAlign('center', 'center');
 		display2 = draw.createGraphics(width / 2, height);
 		display2.textFont("consolas");
 		display2.angleMode("degrees");
