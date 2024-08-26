@@ -6,14 +6,17 @@ points_eligible_for_enemies = []
 for w in all_waypoints.values():
 	add = False
 	if (w['y'] > 1000): add = True
-	if (w['y'] < -1000 and (w['x'] > -3000 or w['x'] < -4000)): add = True
+	if (w['y'] < -1000 and (
+		(w['x'] < (-800 - 2500 * w['y'] / -5000))
+		or w['x'] > (800 - 2500 * w['y'] / -5000)
+	   )): add = True
 	if (add): points_eligible_for_enemies.append(w)
 print(len(points_eligible_for_enemies))
 enemy_chance = 0.5
 points_with_enemies = list(filter(lambda a: random() < enemy_chance, points_eligible_for_enemies))
 output = {}
-for i in range(-10, 10):
-	for j in range(-10, 10): output[f'{i},{j}'] = {}
+for i in range(-10, 11):
+	for j in range(-10, 11): output[f'{i},{j}'] = {}
 def create_key(x, y):
 	return str(floor(x / 500)) + ',' + str(floor(y / 500))
 for p in points_with_enemies:
@@ -23,7 +26,7 @@ for p in points_with_enemies:
 	enemy_types = ['basic']
 	enemy_weights = [1]
 	for i in range(number_to_create):
-		radius = 50 + random() * 10
+		radius = 150 + random() * 30
 		angle = 360 / number_to_create * i
 		x = p['x']
 		y = p['y']
@@ -36,7 +39,11 @@ for p in points_with_enemies:
 			'x': x,
 			'y': y,
 			'home': p['name'],
-			'id': id
+			'id': id,
+			'speed': 0,
+			'turnRate': 0,
+			'maxTurnRate': 1,
+			'heading': (angle + 180) % 360
 		}
 for key, value in output.items():
 	open(f'island_enemies/{key}.json', 'w+').write(dumps(value))

@@ -44,8 +44,8 @@ function physics() {
 }
 function drawParameter(draw, param) {
 	draw.textAlign("right", "center");
-	draw.text(param.name, -30, 0);
-	draw.rect(-7, -1, 14, 2);
+	draw.text(param.name, -12, 0);
+	draw.rect(-2, -1, 4, 2);
 	var param_value = param.value;
 	if (param_value < param.min) param_value = param.min;
 	if (param_value > param.max) param_value = param.max;
@@ -54,8 +54,8 @@ function drawParameter(draw, param) {
 		draw.push();
 		draw.fill(draw.color(0, 0, 0, 0));
 		draw.strokeWeight(1);
-		draw.arc(60, 0, 60, 60, 150, 30);
-		draw.translate(60, 0);
+		draw.arc(46, 0, 60, 60, 150, 30);
+		draw.translate(46, 0);
 		draw.fill("green");
 		draw.strokeWeight(0);
 		draw.rotate(240);
@@ -92,11 +92,11 @@ function drawParameter(draw, param) {
 		draw.pop();
 		draw.fill("lime");
 		draw.textAlign("center", "center");
-		draw.text(value, 60, 20);
+		draw.text(value, 46, 20);
 		draw.fill("white");
 	} else {
-		draw.textAlign("left", "center");
-		draw.text(value, 30, 0);
+		draw.textAlign("center", "center");
+		draw.text(value, 46, 0);
 	}
 }
 function loadZone(name) {
@@ -291,6 +291,7 @@ function update() {
 		0.983 +
 		0.02 * Math.min(1, player.engine.current_n1 / 0.19) +
 		0.83 * Math.max(0, (player.engine.current_n1 - 0.19) / 0.85);
+	player.engine.current_ff = (player.engine.max_ff - player.engine.idle_ff) * (player.engine.current_n1 - player.engine.idle_n1) / (player.engine.max_n1 - player.engine.idle_n1) + player.engine.idle_ff;
 	player.engine.cmd_n1 =
 		player.engine.idle_n1 +
 		player.engine.cmd_throttle *
@@ -333,8 +334,8 @@ function update() {
 	drawLeftDisplay(display1, width / 2, height);
 	draw.image(display1, 0, 0);
 	draw.image(display2, width / 2, 0);
-	if (Math.abs(player.engine.cmd_n1 - player.engine.current_n1) <= 0.005) {
-		player.engine.current_n1 = player.engine.cmd_n1;
+	if (Math.abs(player.engine.cmd_n1 - player.engine.current_n1) <= 0.005 && player.engine.trend_n1) {
+		player.engine.current_n1 = player.engine.cmd_n1 + (Math.random() - 0.5) * 0.003;
 		player.engine.trend_n1 = 0;
 	}
 	if (

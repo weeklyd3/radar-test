@@ -93,6 +93,8 @@ function drawMap(draw, width, height) {
 	draw.triangle(x_rudder, -map_radius - height * 0.07, x_rudder - 5, -map_radius - height * 0.05, x_rudder + 5, -map_radius - height * 0.05);
 	draw.pop();
 	draw.pop();
+	var ratio = (player.full_map ? height * 0.425 : height * 0.85) / player.map_range;
+	drawEnemiesOnMap(draw, width, height, ratio);
 }
 function drawEngine(draw, width, height) {
 	draw.clear();
@@ -100,9 +102,12 @@ function drawEngine(draw, width, height) {
 	draw.strokeWeight(0);
 	draw.background('black');
 	draw.fill('white');
+	var offset = 100;
 	var parameters = [
 		{
 			name: 'Throttle',
+			x: -offset,
+			y: 30,
 			min: 0,
 			max: 100,
 			value: (player.engine.current_n1 - player.engine.idle_n1) / (player.engine.max_n1 - player.engine.idle_n1) * 100,
@@ -111,7 +116,9 @@ function drawEngine(draw, width, height) {
 			commanded_value: player.engine.cmd_throttle * 100
 		},
 		{
-			name: "Commanded Throttle",
+			name: "CMD THR",
+			x: offset,
+			y: -20,
 			min: 0,
 			max: 100,
 			value: player.engine.cmd_throttle * 100,
@@ -121,6 +128,8 @@ function drawEngine(draw, width, height) {
 		},
 		{
 			name: 'EPR',
+			x: -offset,
+			y: 30,
 			min: 0.9,
 			max: 1.9,
 			value: player.engine.current_epr,
@@ -129,7 +138,10 @@ function drawEngine(draw, width, height) {
 			commanded_value: player.engine.cmd_epr
 		},
 		{
-			name: 'Commanded EPR',
+			name: 'CMD EPR',
+			x: offset,
+			no_change_y: true,
+			y: -20,
 			min: 0.9,
 			max: 1.9,
 			value: player.engine.cmd_epr,
@@ -139,7 +151,9 @@ function drawEngine(draw, width, height) {
 		},
 		{
 			name: 'N1',
-			min: 0,
+			x: -offset,
+			y: 30,
+			min: 0,			
 			max: 104,
 			value: player.engine.current_n1 * 100,
 			decimals: 1,
@@ -148,7 +162,10 @@ function drawEngine(draw, width, height) {
 			commanded_value: player.engine.cmd_n1 * 100
 		},
 		{
-			name: 'Commanded N1',
+			name: 'CMD N1',
+			x: offset,
+			y: -20,
+			no_change_y: true,
 			min: 0,
 			max: 104,
 			value: player.engine.cmd_n1 * 100,
@@ -158,6 +175,7 @@ function drawEngine(draw, width, height) {
 		},
 		{
 			name: 'N2',
+			y: 30,
 			min: 0,
 			max: 100.2,
 			value: player.engine.current_n2 * 100,
@@ -167,18 +185,37 @@ function drawEngine(draw, width, height) {
 		{
 			name: "Fuel per hour",
 			min: 0,
+			y: 35,
 			max: Infinity,
 			value: player.engine.current_ff,
 			decimals: 0,
 			dial: false
 		}
 	];
+	player.engine.current_fuel -= player.engine.current_ff / 3600 / 24;
+	draw.push();
+	var selected_page = page_list[player.selected_page];
+	var start_height = 300;
+	player.mass = (player.engine.current_fuel + 54000);
+	if (height == globalDraw.height) {
+		draw.translate(width / 2, start_height + (height - start_height) / 2);
+		draw.fill('green');
+		if (player.engine.display_warning) draw.fill('#990000');
+		draw.rect(-width / 2, -(height - start_height) / 2, width, height - start_height);
+		draw.fill('white');
+		player.engine.display_warning = pages[selected_page](draw, width, height - start_height);
+	}
+	draw.pop();
 	draw.translate(width / 2, 10);
+	var full_screen = height == globalDraw.height;
+	var translate_height = 0;
 	for (const param of parameters) {
 		if (param.hide) continue;
-		draw.translate(0, param.dial ? 35 : 10);
+		draw.translate(full_screen ? (param.x ?? 0) : 0, full_screen ? param.y : (param.dial ? 35 : 10));
+		translate_height += full_screen ? param.y : (param.dial ? 35 : 10);
 		drawParameter(draw, param);
-		draw.translate(0, param.dial ? 35 : 10);
+		draw.translate(full_screen ? (-param.x ?? 0) : 0, full_screen ? (param.y < 0 ? 30 : param.y) : (param.dial ? 35 : 10));
+		translate_height += full_screen ? (param.y < 0 ? 30 : param.y) : (param.dial ? 35 : 10);
 	}
 	draw.pop();
 }

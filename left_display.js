@@ -36,24 +36,19 @@ function drawLeftDisplay(draw, width, height) {
 		var engine_exhaust_position = rotatePoint(movePointAtAngle(engine_position, -8, player.heading), engine_position, engine_turn);
 		for (var i = 0; i < player.engine.current_n1 * 2; i++) {
 			var color = 200 - (player.engine.current_n1 * 160) + (Math.random() - 0.5) * 60;
-			exhaustParticles.push({
+			player.bullets.push({
 				x: engine_exhaust_position[0] + (Math.random() - 0.5) * 0,
 				y: engine_exhaust_position[1],
 				speed: -35 * ((Math.random() - 0.5) * 0.4 + 0.8) * player.engine.current_n1,
 				heading: player.heading + engine_turn + (Math.random() - 0.5) * 10 * player.engine.current_n1,
 				lifetime: 40,
 				size: 2 + (player.engine.current_n1 + (Math.random() - 0.5) * 0.5) * 7,
+				damage: 0.1,
 				color: draw.color(color, color, color, 50 + Math.random() * (50 + 50 * player.engine.current_n1))
 			});
 		}
 	}
-	exhaustParticles = exhaustParticles.filter((a) => !a.invalid);
 	draw.strokeWeight(0);
-	for (const p of exhaustParticles) {
-		particlePhysics(p);
-		draw.fill(p.color);
-		draw.circle(p.x - player.x, p.y - player.y, p.size);
-	}
 	player.bullets = player.bullets.filter((a) => !a.invalid);
 	if (click) {
 		var position = rotatePoint([player.x, player.y - 60 + 12.5], [player.x, player.y], player.heading - cannon_angle);
@@ -64,14 +59,24 @@ function drawLeftDisplay(draw, width, height) {
 			speed: player.gun.speed + (Math.random() - 0.5) * player.gun.speedRandom,
 			lifetime: player.gun.lifetime,
 			color: player.gun.color,
-			size: player.gun.size
+			size: player.gun.size,
+			damage: player.gun.damage
 		})
 	}
 	for (const p of player.bullets) {
 		particlePhysics(p);
-		draw.fill(p.color ?? (p.enemy ? 'red': 'blue'));
+		try {
+			draw.fill(p.color ?? (p.enemy ? 'red': 'blue'));
+		} catch (e) {
+			console.log(JSON.stringify(p.color) ?? (p.enemy ? 'red' : 'blue'), e);
+		}
 		draw.circle(p.x - player.x, p.y - player.y, p.size);
 	}
+	draw.pop();
+	draw.push();
+	draw.translate(width / 2, height / 2);
+	draw.rotate(-player.heading);
+	loadEnemies(draw, width, height);
 	draw.pop();
 	draw.push();
 	draw.translate(width / 2, height / 2);
@@ -138,7 +143,6 @@ function drawLeftDisplay(draw, width, height) {
 	draw.line(0, 0, 0, -width * 0.1);
 	draw.pop();
 }
-var exhaustParticles = [];
 function rotatePoint(point, origin, amount) {
 	var distance = ((point[0] - origin[0]) ** 2 + 
 				   (point[1] - origin[1]) ** 2) ** 0.5;

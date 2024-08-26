@@ -9,7 +9,7 @@ var quests = {
 			{"body": "Visit IONVE", "validation": () => distTo('ionve') < 60},
 			{"body": "Visit THESA", "validation": () => distTo('thesa') < 60},
 			{"body": "Visit FARTO", "validation": () => distTo('farto') < 60},
-			{"body": "Stop and park brake at FARTO", "validation": () => { return distTo('farto') < 60 && player.speed < 0.05 && player.engine.parking_brake }}
+			{"body": "Stop and park brake at FARTO", "validation": () => { return distTo('farto') < 100 && player.speed < 0.05 && player.engine.parking_brake }}
 		],
 		"nextQuest": "shoot"
 	},
@@ -17,7 +17,8 @@ var quests = {
 		"name": "Tutorial: Shoot!",
 		"body": "Use your mouse to aim and click ANYWHERE to shoot. ANYWHERE. The mouse is used EXCLUSIVELY for shooting.",
 		"objectives": [
-			{"body": "Well that was easy, wasn't it?", "validation": () => {return player.bullets.length > 0}}
+			{"body": "Fire something!", "validation": () => {return player.bullets.length > 0}},
+			{"body": "Defeat enemies at <idk>", "validation": () => false}
 		]
 	}
 };

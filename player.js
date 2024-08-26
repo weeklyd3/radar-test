@@ -14,12 +14,15 @@ var player = {
 	water_on_map: false,
 	full_map: false,
 	bullets: [],
+	enemy_progress: {},
+	enemy_counter: 0,
 	// quests: lists all the quests given
 	// the number indicates objectives completed
 	// indicated using binary, first objective is last digit
 	// second one complete but not first = 2
 	// boolean indicates overall quest completion
 	selected_quest: 0,
+	selected_page: 0,
 	quests: {"navigation": [0, false]},
 	quest_list: ['navigation'],
 	gun: {
@@ -30,22 +33,26 @@ var player = {
 		speedRandom: 0,
 		size: 10,
 		lifetime: 200,
-		color: 'green'
+		color: 'green',
+		damage: 1
 	},
 	engine: {
+		display_warning: false,
 		autopilot: false,
 		parking_brake: true,
 		autothrottle: false,
 		idle_n1: 0.19,
 		max_n1: 1.04,
-		idle_ff: 1000,
-		max_ff: 10000,
+		max_fuel: 15195,
+		idle_ff: 1500,
+		max_ff: 7500,
 		current_n1: 0.19,
 		trend_n1: 0,
 		max_trend_n1: 0.005,
 		max_trend_change_n1: 0.0003,
 		current_n2: 1.002,
-		current_ff: 1000,
+		current_ff: 2000,
+		current_fuel: 12000,
 		current_epr: 1.003,
 		max_n2: 1.002,
 		min_n2: 0,
