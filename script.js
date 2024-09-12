@@ -1,7 +1,7 @@
 var save_frame_count = 0;
 function physics() {
 	var thrust = 3500;
-	var thrust_force = thrust * player.engine.current_n1;
+	var thrust_force = thrust * (n1ToThr(player.engine.current_n1) + player.engine.idle_n1) / (1 + player.engine.idle_n1);
 	var drag_force = drag(
 		(player.velocity[0] ** 2 + player.velocity[1] ** 2) ** 0.5 * 24,
 	);
@@ -49,13 +49,69 @@ function drawParameter(draw, param) {
 	var param_value = param.value;
 	if (param_value < param.min) param_value = param.min;
 	if (param_value > param.max) param_value = param.max;
-	var value = param_value.toFixed(param.decimals);
+	const tens = 10 ** param.decimals;
+	var value = (Math.floor(param_value * tens) / tens).toFixed(param.decimals);
+	var unboundedValue = (Math.floor(param.value * tens) / tens).toFixed(param.decimals);
 	if (param.dial) {
 		draw.push();
 		draw.fill(draw.color(0, 0, 0, 0));
 		draw.strokeWeight(1);
 		draw.arc(46, 0, 60, 60, 150, 30);
+		var char_width = draw.textWidth('0');
+		draw.strokeWeight(0);
 		draw.translate(46, 0);
+		draw.fill("lime");
+		draw.textAlign("center", "center");
+		var char_number = 0;
+		const line_height = 15;
+		for (const digit of unboundedValue.split('')) {
+			char_number++;
+			var y_offset = 0;
+			if (char_number == unboundedValue.length) {
+				y_offset = (param.value - unboundedValue) / (1 / tens) * line_height;
+			} else if (Number(digit) == Number(digit)) {
+				var next_digit = unboundedValue[char_number];
+				var next_digit_index = char_number;
+				if (next_digit == '.') {
+					next_digit = unboundedValue[char_number + 1];
+					next_digit_index++;
+				}
+				console.assert(next_digit != '.');
+				console.assert(next_digit == value[next_digit_index])
+				if (next_digit == '9' && unboundedValue[unboundedValue.length - 1] == '9') {
+					console.assert(unboundedValue[next_digit_index] == '9');
+					var fragment = param.value.toFixed(15).slice(unboundedValue.length);
+					fragment = fragment.replace('.', '');
+					y_offset = fragment / (10 ** (fragment.length)) * line_height;
+				}
+			}
+			const x = 20 - (value.length - char_number) * char_width;
+			draw.text(digit, x, 20 + y_offset);
+			if (digit == '9' && char_number == 1) draw.text('1', x - char_width, 20 - line_height + y_offset);
+			if (Number(digit) == Number(digit)) {
+				draw.text((Number(digit) + 1) % 10, x, 20 - line_height + y_offset);
+				if (y_offset > line_height / 2) draw.text((Number(digit) + 2) % 10, x, 20 - 2 * line_height + y_offset);
+				draw.text((Number(digit) + 9) % 10, x, 20 + line_height + y_offset);
+			}
+		}
+		//draw.text(param.value.toFixed(param.decimals), 0, 20);
+		draw.fill('black');
+		draw.rect(-25, -15, 45 - char_width / 2, 25);
+		draw.rect(-25, 28, 45 - char_width / 2, 40);
+		draw.rect(20 - char_width / 2, -15, char_width, 18);
+		draw.rect(20 - char_width / 2, 35, char_width, 33);
+		draw.strokeWeight(1);
+		draw.fill(draw.color(0, 0, 0, 0));
+		draw.beginShape();
+		draw.vertex(20 - char_width / 2, 10);
+		draw.vertex(20 + char_width * -4.5, 10);
+		draw.vertex(20 + char_width * -4.5, 28);
+		draw.vertex(20 - char_width / 2, 28);
+		draw.vertex(20 - char_width / 2, 35);
+		draw.vertex(20 + char_width / 2, 35);
+		draw.vertex(20 + char_width / 2, 3);
+		draw.vertex(20 - char_width / 2, 3);
+		draw.endShape('close');
 		draw.fill("green");
 		draw.strokeWeight(0);
 		draw.rotate(240);
@@ -90,13 +146,10 @@ function drawParameter(draw, param) {
 			draw.triangle(0, -33, -3, -41, 3, -41);
 		}
 		draw.pop();
-		draw.fill("lime");
-		draw.textAlign("center", "center");
-		draw.text(value, 46, 20);
 		draw.fill("white");
 	} else {
 		draw.textAlign("center", "center");
-		draw.text(value, 46, 0);
+		draw.text(param.value.toFixed(param.decimals), 46, 0);
 	}
 }
 function loadZone(name) {
@@ -245,6 +298,20 @@ function save() {
 	var json = JSON.stringify(player);
 	localStorage.setItem('RADARTEST-save', json);
 }
+function tempFactor(temp) {
+	return (1 + 0.2105 * (temp - 20) / 20);
+}
+function thrToN1(thr) {
+	const n1 = player.engine.idle_n1 / 2 +
+	player.engine.idle_n1 / 2 * tempFactor(player.temperature) +
+	(thr * tempFactor(player.temperature)) *
+		(player.engine.max_n1 - player.engine.idle_n1);
+	return n1;
+}
+function n1ToThr(n1) {
+	const thr = (n1 - (player.engine.idle_n1 / 2 + player.engine.idle_n1 / 2 * tempFactor(player.temperature))) / tempFactor(player.temperature) / (player.engine.max_n1 - player.engine.idle_n1);
+	return thr;
+}
 function update() {
 	save_frame_count++;
 	if ((save_frame_count % 100) == 0) save();
@@ -292,10 +359,7 @@ function update() {
 		0.02 * Math.min(1, player.engine.current_n1 / 0.19) +
 		0.83 * Math.max(0, (player.engine.current_n1 - 0.19) / 0.85);
 	player.engine.current_ff = (player.engine.max_ff - player.engine.idle_ff) * (player.engine.current_n1 - player.engine.idle_n1) / (player.engine.max_n1 - player.engine.idle_n1) + player.engine.idle_ff;
-	player.engine.cmd_n1 =
-		player.engine.idle_n1 +
-		player.engine.cmd_throttle *
-			(player.engine.max_n1 - player.engine.idle_n1);
+	player.engine.cmd_n1 = thrToN1(player.engine.cmd_throttle);
 	player.engine.cmd_epr = 1.003 + 0.83 * player.engine.cmd_throttle;
 	player.engine.current_n1 += player.engine.trend_n1;
 	player.zoneX = Math.floor(player.x / 500);
@@ -334,8 +398,8 @@ function update() {
 	drawLeftDisplay(display1, width / 2, height);
 	draw.image(display1, 0, 0);
 	draw.image(display2, width / 2, 0);
-	if (Math.abs(player.engine.cmd_n1 - player.engine.current_n1) <= 0.005 && player.engine.trend_n1) {
-		player.engine.current_n1 = player.engine.cmd_n1 + (Math.random() - 0.5) * 0.003;
+	if (Math.abs(player.engine.cmd_n1 - player.engine.current_n1) <= 0.005) {
+		player.engine.current_n1 = player.engine.cmd_n1;
 		player.engine.trend_n1 = 0;
 	}
 	if (
@@ -414,23 +478,23 @@ var s = function (sketch) {
 		display1.textAlign('left', 'top');
 		// display1.textAlign('center', 'center');
 		display2 = draw.createGraphics(width / 2, height);
-		display2.textFont("consolas");
+		display2.textFont("Consolas");
 		display2.angleMode("degrees");
 		display2.background("black");
 		display2.textAlign("center", "center");
 		nav_display = draw.createGraphics(width / 2, height);
-		nav_display.textFont("consolas");
+		nav_display.textFont("Consolas");
 		nav_display.angleMode("degrees");
 		nav_display.textAlign("center", "center");
 		engine_display = draw.createGraphics(width / 2, height);
-		engine_display.textFont("consolas");
+		engine_display.textFont("Consolas");
 		engine_display.angleMode("degrees");
 		engine_display.stroke("white");
 		engine_display.textAlign("center", "center");
 		engine_display.textSize(15);
 		display2_header = draw.createGraphics(width / 2, height);
 		menu_display = draw.createGraphics(width / 2, height);
-		menu_display.textFont("consolas");
+		menu_display.textFont("Consolas");
 		menu_display.angleMode("degrees");
 		menu_display.stroke("white");
 		menu_display.textAlign("center", "center");

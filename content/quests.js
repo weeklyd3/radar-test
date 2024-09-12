@@ -18,7 +18,7 @@ var quests = {
 		"body": "Use your mouse to aim and click ANYWHERE to shoot. ANYWHERE. The mouse is used EXCLUSIVELY for shooting.",
 		"objectives": [
 			{"body": "Fire something!", "validation": () => {return player.bullets.length > 0}},
-			{"body": "Defeat enemies at <idk>", "validation": () => false}
+			{"body": "Kill 10 enemies", "validation": () => player.enemy_count >= 10}
 		]
 	}
 };

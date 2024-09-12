@@ -82,7 +82,7 @@ function drawMap(draw, width, height) {
 	}
 	draw.text(waypoint_info + 'map zoom ×' + Math.round(10 * player.map_range / map_radius) / 10 + "\nrange " + Math.round(player.map_range) + " px", width / 2, -map_radius + height * 0.02);
 	draw.textAlign('left', 'center');
-	draw.text(`${player.autopilot ? "AUTOPILOT " : "MANUAL RUD "}| ${player.engine.autothrottle ? "CRUISE CTRL" : "MANUAL THR"}\n${player.engine.parking_brake ? "PARKING BRAKE!!! [b]\n" : ""}${Math.round((player.velocity[0] ** 2 + player.velocity[1] ** 2) ** 0.5 * 24 / 1000 * 3600)} mph\nthr ${Math.round(3500 * player.engine.current_n1)}\ndrag ${Math.round(drag((player.velocity[0] ** 2 + player.velocity[1] ** 2) ** 0.5) * 24 * 24)}`, -width / 2, -map_radius + height * 0.02);
+	draw.text(`${player.autopilot ? "AUTOPILOT " : "MANUAL RUD "}| ${player.engine.autothrottle ? "CRUISE CTRL" : "MANUAL THR"}\n${player.engine.parking_brake ? "PARKING BRAKE!!! [b]\n" : ""}${Math.round((player.velocity[0] ** 2 + player.velocity[1] ** 2) ** 0.5 * 24 / 1000 * 3600)} mph`, -width / 2, -map_radius + height * 0.02);
 	draw.rect(-width / 6, -height * 0.08 - map_radius, width / 3, 2);
 	draw.rect(-width / 6, -height * 0.08 - map_radius, 2, 10);
 	draw.rect(width / 6 - 2, -height * 0.08 - map_radius, 2, 10);
@@ -110,7 +110,7 @@ function drawEngine(draw, width, height) {
 			y: 30,
 			min: 0,
 			max: 100,
-			value: (player.engine.current_n1 - player.engine.idle_n1) / (player.engine.max_n1 - player.engine.idle_n1) * 100,
+			value: Math.max(n1ToThr(player.engine.current_n1) * 100, 0),
 			decimals: 1,
 			dial: true,
 			commanded_value: player.engine.cmd_throttle * 100
@@ -130,8 +130,8 @@ function drawEngine(draw, width, height) {
 			name: 'EPR',
 			x: -offset,
 			y: 30,
-			min: 0.9,
-			max: 1.9,
+			min: 1,
+			max: 2,
 			value: player.engine.current_epr,
 			decimals: 3,
 			dial: true,
@@ -153,8 +153,8 @@ function drawEngine(draw, width, height) {
 			name: 'N1',
 			x: -offset,
 			y: 30,
-			min: 0,			
-			max: 104,
+			min: 15,			
+			max: 115,
 			value: player.engine.current_n1 * 100,
 			decimals: 1,
 			dial: player.display == 2,
@@ -194,6 +194,19 @@ function drawEngine(draw, width, height) {
 	];
 	player.engine.current_fuel -= player.engine.current_ff / 3600 / 24;
 	draw.push();
+	draw.translate(width / 2, 10);
+	var full_screen = height == globalDraw.height;
+	var translate_height = 0;
+	for (const param of parameters) {
+		if (param.hide) continue;
+		draw.translate(full_screen ? (param.x ?? 0) : 0, full_screen ? param.y : (param.dial ? 35 : 10));
+		translate_height += full_screen ? param.y : (param.dial ? 35 : 10);
+		drawParameter(draw, param);
+		draw.translate(full_screen ? (-param.x ?? 0) : 0, full_screen ? (param.y < 0 ? 30 : param.y) : (param.dial ? 35 : 10));
+		translate_height += full_screen ? (param.y < 0 ? 30 : param.y) : (param.dial ? 35 : 10);
+	}
+	draw.pop();
+	draw.push();
 	var selected_page = page_list[player.selected_page];
 	var start_height = 300;
 	player.mass = (player.engine.current_fuel + 54000);
@@ -206,17 +219,6 @@ function drawEngine(draw, width, height) {
 		player.engine.display_warning = pages[selected_page](draw, width, height - start_height);
 	}
 	draw.pop();
-	draw.translate(width / 2, 10);
-	var full_screen = height == globalDraw.height;
-	var translate_height = 0;
-	for (const param of parameters) {
-		if (param.hide) continue;
-		draw.translate(full_screen ? (param.x ?? 0) : 0, full_screen ? param.y : (param.dial ? 35 : 10));
-		translate_height += full_screen ? param.y : (param.dial ? 35 : 10);
-		drawParameter(draw, param);
-		draw.translate(full_screen ? (-param.x ?? 0) : 0, full_screen ? (param.y < 0 ? 30 : param.y) : (param.dial ? 35 : 10));
-		translate_height += full_screen ? (param.y < 0 ? 30 : param.y) : (param.dial ? 35 : 10);
-	}
 	draw.pop();
 }
 function drawMenu(draw, width, height) {
